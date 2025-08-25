@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Donghua Episode Tracker (Google Auth + Firestore)</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f7f7f7;
+        padding: 20px;
+        max-width: 900px;
+        margin: auto;
+        transition: background 0.3s, color 0.3s;
+      }
+      body.dark-mode {
+        background: #121212;
+        color: #f7f7f7;
+      }
+      h1 {
+        text-align: center;
+      }
+      .controls,
+      .search-sort {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .show {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background: #fff;
+        margin: 5px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: background 0.3s, color 0.3s;
+      }
+      body.dark-mode .show {
+        background: #1e1e1e;
+        color: #f7f7f7;
+      }
+      .show-info {
+        flex: 1;
+        min-width: 0;
+      }
+      .show-info .history {
+        font-size: 0.85em;
+        color: #555;
+        margin-top: 5px;
+      }
+      body.dark-mode .show-info .history {
+        color: #aaa;
+      }
+      .buttons {
+        display: flex;
+        flex-shrink: 0;
+        gap: 5px;
+      }
+      button,
+      select,
+      input,
+      textarea {
+        border: none;
+        padding: 5px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      textarea {
+        width: 100%;
+        height: 80px;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        margin-bottom: 10px;
+      }
+      .add-btn {
+        background: #4caf50;
+        color: white;
+      }
+      .update-btn {
+        background: #2196f3;
+        color: white;
+      }
+      .edit-btn {
+        background: #ffc107;
+        color: white;
+      }
+      .inc-btn {
+        background: #ff9800;
+        color: white;
+      }
+      .dec-btn {
+        background: #9c27b0;
+        color: white;
+      }
+      .delete-btn {
+        background: #f44336;
+        color: white;
+      }
+      .export-btn {
+        background: #607d8b;
+        color: white;
+      }
+      .freq-btn {
+        background: #009688;
+        color: white;
+      }
+      .import-btn {
+        background: #795548;
+        color: white;
+      }
+      .pagination-btn {
+        background: #607d8b;
+        color: white;
+        margin: 5px 2px;
+      }
+      #authSection {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Donghua Episode Tracker (Google Auth + Firestore)</h1>
+
+    <div id="authSection">
+      <button id="signInBtn">Sign In with Google</button>
+      <button id="signOutBtn">Sign Out</button>
+      <div id="userInfo"></div>
+    </div>
+
+    <div class="controls">
+      <textarea
+        id="showNames"
+        placeholder="Enter donghua names, one per line"
+      ></textarea>
+      <button class="add-btn" onclick="addShows()">➕ Add Shows</button>
+      <button class="export-btn" onclick="exportJSON()">💾 Export JSON</button>
+      <button
+        class="import-btn"
+        onclick="document.getElementById('importFile').click()"
+      >
+        📥 Import JSON
+      </button>
+      <input
+        type="file"
+        id="importFile"
+        style="display: none"
+        onchange="handleImport(event)"
+      />
+      <button class="export-btn" onclick="exportCSV()">📄 Export CSV</button>
+      <button class="export-btn" onclick="toggleDarkMode()">
+        🌓 Dark Mode
+      </button>
+      <button class="freq-btn" onclick="showFrequent()">
+        🔥 Frequently Used
+      </button>
+    </div>
+
+    <div class="search-sort">
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Search shows..."
+        oninput="render()"
+      />
+      <select id="sortSelect" onchange="render()">
+        <option value="created">Sort by Creation Time</option>
+        <option value="name">Sort by Name (A-Z)</option>
+        <option value="ep">Sort by Episode (Highest)</option>
+      </select>
+      <label
+        >Shows per page:
+        <select id="pageSizeSelect" onchange="changePageSize()">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
+        </select>
+      </label>
+      <label
+        >Jump to page:
+        <input
+          type="number"
+          id="jumpPage"
+          min="1"
+          style="width: 50px"
+          oninput="jumpToPage()"
+        />
+      </label>
+    </div>
+
+    <div id="showList"></div>
+
+    <div class="pagination">
+      <button class="pagination-btn" onclick="prevPage()">⬅ Previous</button>
+      <span id="pageInfo"></span>
+      <button class="pagination-btn" onclick="nextPage()">Next ➡</button>
+    </div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        doc,
+        setDoc,
+        onSnapshot,
+        runTransaction,
+        deleteDoc,
+      } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+      import {
+        getAuth,
+        signInWithPopup,
+        GoogleAuthProvider,
+        signOut as firebaseSignOut,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+      // --- Firebase config ---
+      const firebaseConfig = {
+        apiKey: "AIzaSyCLPxspkEMpxoXkFAVLrE8ZENz3PuIGQ0M",
+        authDomain: "donghuatracker.firebaseapp.com",
+        projectId: "donghuatracker",
+        storageBucket: "donghuatracker.appspot.com",
+        messagingSenderId: "235741425337",
+        appId: "1:235741425337:web:7eaaba2623dab340c47568",
+        measurementId: "G-XKF22H3TTD",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const auth = getAuth(app);
+      const provider = new GoogleAuthProvider();
+      const showsCollection = collection(db, "shows");
+
+      let shows = {};
+      let currentPage = 1;
+      let showsPerPage = 10;
+      let darkMode = localStorage.getItem("darkMode") === "true";
+      document.body.classList.toggle("dark-mode", darkMode);
+
+      // --- Authentication ---
+      const signInBtn = document.getElementById("signInBtn");
+      const signOutBtn = document.getElementById("signOutBtn");
+
+      signInBtn.addEventListener("click", async () => {
+        try {
+          await signInWithPopup(auth, provider);
+        } catch (e) {
+          alert("Sign-in failed: " + e.message);
+        }
+      });
+
+      signOutBtn.addEventListener("click", async () => {
+        try {
+          await firebaseSignOut(auth);
+        } catch (e) {
+          console.error(e);
+        }
+      });
+
+      onAuthStateChanged(auth, (user) => {
+        const userInfo = document.getElementById("userInfo");
+        if (user) {
+          userInfo.textContent = `Logged in as: ${user.email}`;
+          initRealtime();
+        } else {
+          userInfo.textContent = "Not signed in";
+          shows = {};
+          render();
+        }
+      });
+
+      // --- Firestore Realtime Listener ---
+      function initRealtime() {
+        onSnapshot(showsCollection, (snapshot) => {
+          shows = {};
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            shows[docSnap.id] = {
+              ep: data.ep || 0,
+              history: data.history || [],
+              usage: data.usage || 0,
+              created: data.created || Date.now(),
+            };
+          });
+          render();
+        });
+      }
+
+      async function saveShowToDB(name) {
+        if (!auth.currentUser) return alert("Please sign in");
+        try {
+          await setDoc(doc(db, "shows", name), shows[name]);
+        } catch (e) {
+          console.error("Error saving show:", e);
+        }
+      }
+
+      // --- Core Functions ---
+      function addShows() {
+        if (!auth.currentUser) return alert("Please sign in");
+        const input = document.getElementById("showNames").value.trim();
+        if (!input) return;
+        const names = input
+          .split("\n")
+          .map((n) => n.trim())
+          .filter((n) => n);
+        names.forEach((name) => {
+          if (!shows[name])
+            shows[name] = { ep: 0, history: [], usage: 0, created: Date.now() };
+          saveShowToDB(name);
+        });
+        document.getElementById("showNames").value = "";
+        render();
+      }
+
+      async function incrementEpisode(show) {
+        if (!auth.currentUser) return alert("Please sign in");
+        const showRef = doc(db, "shows", show);
+        try {
+          await runTransaction(db, async (transaction) => {
+            const docSnap = await transaction.get(showRef);
+            if (!docSnap.exists()) return;
+            const data = docSnap.data();
+            const oldEp = data.ep || 0;
+            const newEp = oldEp + 1;
+            transaction.update(showRef, {
+              ep: newEp,
+              history: [
+                ...(data.history || []),
+                `${oldEp} → ${newEp} on ${new Date().toLocaleDateString()}`,
+              ],
+              usage: (data.usage || 0) + 1,
+            });
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      async function decrementEpisode(show) {
+        if (!auth.currentUser) return alert("Please sign in");
+        const showRef = doc(db, "shows", show);
+        try {
+          await runTransaction(db, async (transaction) => {
+            const docSnap = await transaction.get(showRef);
+            if (!docSnap.exists()) return;
+            const data = docSnap.data();
+            const oldEp = data.ep || 0;
+            if (oldEp <= 0) return;
+            const newEp = oldEp - 1;
+            transaction.update(showRef, {
+              ep: newEp,
+              history: [
+                ...(data.history || []),
+                `${oldEp} → ${newEp} on ${new Date().toLocaleDateString()}`,
+              ],
+              usage: (data.usage || 0) + 1,
+            });
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      async function updateEpisode(show) {
+        if (!auth.currentUser) return alert("Please sign in");
+        const epInput = prompt(`Enter last watched episode for ${show}:`);
+        const ep = parseInt(epInput);
+        if (isNaN(ep) || ep < 0) return;
+        const showRef = doc(db, "shows", show);
+        try {
+          await runTransaction(db, async (transaction) => {
+            const docSnap = await transaction.get(showRef);
+            if (!docSnap.exists()) return;
+            const data = docSnap.data();
+            transaction.update(showRef, {
+              ep,
+              history: [
+                ...(data.history || []),
+                `${data.ep} → ${ep} on ${new Date().toLocaleDateString()}`,
+              ],
+              usage: (data.usage || 0) + 1,
+            });
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      async function editShowName(oldName) {
+        if (!auth.currentUser) return alert("Please sign in");
+        const newName = prompt("Edit donghua name:", oldName);
+        if (!newName || newName.trim() === "" || newName === oldName) return;
+        const oldRef = doc(db, "shows", oldName);
+        const newRef = doc(db, "shows", newName);
+        try {
+          await runTransaction(db, async (transaction) => {
+            const oldSnap = await transaction.get(oldRef);
+            const newSnap = await transaction.get(newRef);
+            if (!oldSnap.exists()) return;
+            if (newSnap.exists())
+              return alert("A show with this name already exists.");
+            transaction.set(newRef, oldSnap.data());
+            transaction.delete(oldRef);
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      async function deleteShow(show) {
+        if (!auth.currentUser) return alert("Please sign in");
+        if (!confirm(`Delete ${show}?`)) return;
+        try {
+          await deleteDoc(doc(db, "shows", show));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // --- Dark mode ---
+      function toggleDarkMode() {
+        darkMode = !darkMode;
+        document.body.classList.toggle("dark-mode", darkMode);
+        localStorage.setItem("darkMode", darkMode);
+      }
+
+      // --- Import/Export ---
+      function exportJSON() {
+        const blob = new Blob([JSON.stringify(shows, null, 2)], {
+          type: "application/json",
+        });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "donghua_shows.json";
+        a.click();
+      }
+
+      function handleImport(event) {
+        if (!auth.currentUser) return alert("Please sign in");
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const imported = JSON.parse(e.target.result);
+            Object.entries(imported).forEach(([name, data]) => {
+              shows[name] = {
+                ep: data.ep || 0,
+                history: data.history || [],
+                usage: data.usage || 0,
+                created: data.created || Date.now(),
+              };
+              saveShowToDB(name);
+            });
+            render();
+            alert("Import successful!");
+          } catch (err) {
+            console.error(err);
+            alert("Import failed");
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function exportCSV() {
+        const headers = ["Name", "Episode", "Created", "History", "Usage"];
+        let csv = headers.join(",") + "\n";
+        Object.entries(shows).forEach(([name, data]) => {
+          csv += `"${name}",${data.ep},${new Date(
+            data.created
+          ).toISOString()},"${data.history.join(" | ")}",${data.usage}\n`;
+        });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+        a.download = "donghua_shows.csv";
+        a.click();
+      }
+
+      // --- Pagination ---
+      function changePageSize() {
+        showsPerPage = parseInt(
+          document.getElementById("pageSizeSelect").value
+        );
+        currentPage = 1;
+        render();
+      }
+      function jumpToPage() {
+        const p = parseInt(document.getElementById("jumpPage").value);
+        if (!isNaN(p)) currentPage = p;
+        render();
+      }
+      function nextPage() {
+        const totalPages = Math.ceil(filteredShows().length / showsPerPage);
+        if (currentPage < totalPages) currentPage++;
+        render();
+      }
+      function prevPage() {
+        if (currentPage > 1) currentPage--;
+        render();
+      }
+
+      function filteredShows() {
+        const searchTerm = document
+          .getElementById("searchInput")
+          .value.toLowerCase();
+        let result = Object.entries(shows).filter(([name]) =>
+          name.toLowerCase().includes(searchTerm)
+        );
+        const sortBy = document.getElementById("sortSelect").value;
+        if (sortBy === "created")
+          result.sort((a, b) => a[1].created - b[1].created);
+        else if (sortBy === "name")
+          result.sort((a, b) => a[0].localeCompare(b[0]));
+        else if (sortBy === "ep") result.sort((a, b) => b[1].ep - a[1].ep);
+        return result;
+      }
+
+      function showFrequent() {
+        const topShows = Object.entries(shows)
+          .sort((a, b) => b[1].usage - a[1].usage)
+          .slice(0, 10);
+        const list = document.getElementById("showList");
+        list.innerHTML = "";
+        topShows.forEach(([show, data]) => {
+          const div = document.createElement("div");
+          div.className = "show";
+          div.innerHTML = `<div class="show-info"><strong>${show}</strong> — Ep ${
+            data.ep
+          } — Usage: ${data.usage}<div class="history">${data.history
+            .slice(-5)
+            .join("<br>")}</div></div>
+          <div class="buttons">
+          <button onclick="incrementEpisode('${show}')">➕</button>
+          <button onclick="decrementEpisode('${show}')">➖</button>
+          <button onclick="updateEpisode('${show}')">✏️</button>
+          <button onclick="editShowName('${show}')">📝</button>
+          <button onclick="deleteShow('${show}')">🗑️</button>
+          </div>`;
+          list.appendChild(div);
+        });
+        document.getElementById(
+          "pageInfo"
+        ).textContent = `Top 10 frequently used shows`;
+      }
+
+      function render() {
+        const list = document.getElementById("showList");
+        list.innerHTML = "";
+        const sortedShows = filteredShows();
+        const totalPages = Math.ceil(sortedShows.length / showsPerPage) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+        const start = (currentPage - 1) * showsPerPage;
+        const pageShows = sortedShows.slice(start, start + showsPerPage);
+        pageShows.forEach(([show, data]) => {
+          const div = document.createElement("div");
+          div.className = "show";
+          div.innerHTML = `<div class="show-info"><strong>${show}</strong> — Ep ${
+            data.ep
+          }<div class="history">${data.history
+            .slice(-5)
+            .join("<br>")}</div></div>
+          <div class="buttons">
+          <button onclick="incrementEpisode('${show}')">➕</button>
+          <button onclick="decrementEpisode('${show}')">➖</button>
+          <button onclick="updateEpisode('${show}')">✏️</button>
+          <button onclick="editShowName('${show}')">📝</button>
+          <button onclick="deleteShow('${show}')">🗑️</button>
+          </div>`;
+          list.appendChild(div);
+        });
+        document.getElementById(
+          "pageInfo"
+        ).textContent = `Page ${currentPage} of ${totalPages}`;
+      }
+
+      render();
+    </script>
+  </body>
+</html>
