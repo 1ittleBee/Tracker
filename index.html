@@ -504,11 +504,11 @@
         topShows.forEach(([show, data]) => {
           const div = document.createElement("div");
           div.className = "show";
-          div.innerHTML = `<div class="show-info"><strong>${show}</strong> — Ep ${
-            data.ep
-          } — Usage: ${data.usage}<div class="history">${data.history
-            .slice(-5)
-            .join("<br>")}</div></div>`;
+          const lastLog =
+            data.history.length > 0
+              ? data.history[data.history.length - 1]
+              : "No history";
+          div.innerHTML = `<div class="show-info"><strong>${show}</strong> — Ep ${data.ep} — Usage: ${data.usage}<div class="history">Latest: ${lastLog}</div></div>`;
 
           const buttonsDiv = document.createElement("div");
           buttonsDiv.className = "buttons";
@@ -559,11 +559,11 @@
         pageShows.forEach(([show, data]) => {
           const div = document.createElement("div");
           div.className = "show";
-          div.innerHTML = `<div class="show-info"><strong>${show}</strong> — Ep ${
-            data.ep
-          }<div class="history">${data.history
-            .slice(-5)
-            .join("<br>")}</div></div>`;
+          const lastLog =
+            data.history.length > 0
+              ? data.history[data.history.length - 1]
+              : "No history";
+          div.innerHTML = `<div class="show-info"><strong>${show}</strong> — Ep ${data.ep}<div class="history">Latest: ${lastLog}</div></div>`;
 
           const buttonsDiv = document.createElement("div");
           buttonsDiv.className = "buttons";
