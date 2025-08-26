@@ -136,44 +136,25 @@
         id="showNames"
         placeholder="Enter donghua names, one per line"
       ></textarea>
-      <button class="add-btn" onclick="addShows()">➕ Add Shows</button>
-      <button class="export-btn" onclick="exportJSON()">💾 Export JSON</button>
-      <button
-        class="import-btn"
-        onclick="document.getElementById('importFile').click()"
-      >
-        📥 Import JSON
-      </button>
-      <input
-        type="file"
-        id="importFile"
-        style="display: none"
-        onchange="handleImport(event)"
-      />
-      <button class="export-btn" onclick="exportCSV()">📄 Export CSV</button>
-      <button class="export-btn" onclick="toggleDarkMode()">
-        🌓 Dark Mode
-      </button>
-      <button class="freq-btn" onclick="showFrequent()">
-        🔥 Frequently Used
-      </button>
+      <button class="add-btn" id="addShowsBtn">➕ Add Shows</button>
+      <button class="export-btn" id="exportJSONBtn">💾 Export JSON</button>
+      <button class="import-btn" id="importBtn">📥 Import JSON</button>
+      <input type="file" id="importFile" style="display: none" />
+      <button class="export-btn" id="exportCSVBtn">📄 Export CSV</button>
+      <button class="export-btn" id="darkModeBtn">🌓 Dark Mode</button>
+      <button class="freq-btn" id="frequentBtn">🔥 Frequently Used</button>
     </div>
 
     <div class="search-sort">
-      <input
-        type="text"
-        id="searchInput"
-        placeholder="Search shows..."
-        oninput="render()"
-      />
-      <select id="sortSelect" onchange="render()">
+      <input type="text" id="searchInput" placeholder="Search shows..." />
+      <select id="sortSelect">
         <option value="created">Sort by Creation Time</option>
         <option value="name">Sort by Name (A-Z)</option>
         <option value="ep">Sort by Episode (Highest)</option>
       </select>
       <label
         >Shows per page:
-        <select id="pageSizeSelect" onchange="changePageSize()">
+        <select id="pageSizeSelect">
           <option value="5">5</option>
           <option value="10" selected>10</option>
           <option value="20">20</option>
@@ -181,22 +162,16 @@
       </label>
       <label
         >Jump to page:
-        <input
-          type="number"
-          id="jumpPage"
-          min="1"
-          style="width: 50px"
-          oninput="jumpToPage()"
-        />
+        <input type="number" id="jumpPage" min="1" style="width: 50px" />
       </label>
     </div>
 
     <div id="showList"></div>
 
     <div class="pagination">
-      <button class="pagination-btn" onclick="prevPage()">⬅ Previous</button>
+      <button class="pagination-btn" id="prevBtn">⬅ Previous</button>
       <span id="pageInfo"></span>
-      <button class="pagination-btn" onclick="nextPage()">Next ➡</button>
+      <button class="pagination-btn" id="nextBtn">Next ➡</button>
     </div>
 
     <script type="module">
@@ -533,14 +508,38 @@
             data.ep
           } — Usage: ${data.usage}<div class="history">${data.history
             .slice(-5)
-            .join("<br>")}</div></div>
-          <div class="buttons">
-          <button onclick="incrementEpisode('${show}')">➕</button>
-          <button onclick="decrementEpisode('${show}')">➖</button>
-          <button onclick="updateEpisode('${show}')">✏️</button>
-          <button onclick="editShowName('${show}')">📝</button>
-          <button onclick="deleteShow('${show}')">🗑️</button>
-          </div>`;
+            .join("<br>")}</div></div>`;
+
+          const buttonsDiv = document.createElement("div");
+          buttonsDiv.className = "buttons";
+
+          const incBtn = document.createElement("button");
+          incBtn.textContent = "➕";
+          incBtn.addEventListener("click", () => incrementEpisode(show));
+
+          const decBtn = document.createElement("button");
+          decBtn.textContent = "➖";
+          decBtn.addEventListener("click", () => decrementEpisode(show));
+
+          const editBtn = document.createElement("button");
+          editBtn.textContent = "✏️";
+          editBtn.addEventListener("click", () => updateEpisode(show));
+
+          const nameBtn = document.createElement("button");
+          nameBtn.textContent = "📝";
+          nameBtn.addEventListener("click", () => editShowName(show));
+
+          const delBtn = document.createElement("button");
+          delBtn.textContent = "🗑️";
+          delBtn.addEventListener("click", () => deleteShow(show));
+
+          buttonsDiv.appendChild(incBtn);
+          buttonsDiv.appendChild(decBtn);
+          buttonsDiv.appendChild(editBtn);
+          buttonsDiv.appendChild(nameBtn);
+          buttonsDiv.appendChild(delBtn);
+
+          div.appendChild(buttonsDiv);
           list.appendChild(div);
         });
         document.getElementById(
@@ -564,20 +563,75 @@
             data.ep
           }<div class="history">${data.history
             .slice(-5)
-            .join("<br>")}</div></div>
-          <div class="buttons">
-          <button onclick="incrementEpisode('${show}')">➕</button>
-          <button onclick="decrementEpisode('${show}')">➖</button>
-          <button onclick="updateEpisode('${show}')">✏️</button>
-          <button onclick="editShowName('${show}')">📝</button>
-          <button onclick="deleteShow('${show}')">🗑️</button>
-          </div>`;
+            .join("<br>")}</div></div>`;
+
+          const buttonsDiv = document.createElement("div");
+          buttonsDiv.className = "buttons";
+
+          const incBtn = document.createElement("button");
+          incBtn.textContent = "➕";
+          incBtn.addEventListener("click", () => incrementEpisode(show));
+
+          const decBtn = document.createElement("button");
+          decBtn.textContent = "➖";
+          decBtn.addEventListener("click", () => decrementEpisode(show));
+
+          const editBtn = document.createElement("button");
+          editBtn.textContent = "✏️";
+          editBtn.addEventListener("click", () => updateEpisode(show));
+
+          const nameBtn = document.createElement("button");
+          nameBtn.textContent = "📝";
+          nameBtn.addEventListener("click", () => editShowName(show));
+
+          const delBtn = document.createElement("button");
+          delBtn.textContent = "🗑️";
+          delBtn.addEventListener("click", () => deleteShow(show));
+
+          buttonsDiv.appendChild(incBtn);
+          buttonsDiv.appendChild(decBtn);
+          buttonsDiv.appendChild(editBtn);
+          buttonsDiv.appendChild(nameBtn);
+          buttonsDiv.appendChild(delBtn);
+
+          div.appendChild(buttonsDiv);
           list.appendChild(div);
         });
         document.getElementById(
           "pageInfo"
         ).textContent = `Page ${currentPage} of ${totalPages}`;
       }
+
+      // --- Event Listeners ---
+      document
+        .getElementById("addShowsBtn")
+        .addEventListener("click", addShows);
+      document
+        .getElementById("exportJSONBtn")
+        .addEventListener("click", exportJSON);
+      document.getElementById("importBtn").addEventListener("click", () => {
+        document.getElementById("importFile").click();
+      });
+      document
+        .getElementById("importFile")
+        .addEventListener("change", handleImport);
+      document
+        .getElementById("exportCSVBtn")
+        .addEventListener("click", exportCSV);
+      document
+        .getElementById("darkModeBtn")
+        .addEventListener("click", toggleDarkMode);
+      document
+        .getElementById("frequentBtn")
+        .addEventListener("click", showFrequent);
+      document.getElementById("searchInput").addEventListener("input", render);
+      document.getElementById("sortSelect").addEventListener("change", render);
+      document
+        .getElementById("pageSizeSelect")
+        .addEventListener("change", changePageSize);
+      document.getElementById("jumpPage").addEventListener("input", jumpToPage);
+      document.getElementById("prevBtn").addEventListener("click", prevPage);
+      document.getElementById("nextBtn").addEventListener("click", nextPage);
 
       render();
     </script>
