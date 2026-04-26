@@ -9,12 +9,26 @@
   <body>
     <main class="app-shell">
       <header class="topbar">
-        <div>
+        <div class="title-row">
+          <button
+            class="drawer-toggle"
+            id="drawerToggle"
+            type="button"
+            aria-label="Open menu"
+            aria-controls="appDrawer"
+            aria-expanded="false"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <div>
           <h1>Donghua Episode Tracker</h1>
           <p class="subtitle">
             Track your watch progress, jump between pages quickly, and keep
             your list synced with Firebase.
           </p>
+          </div>
         </div>
 
         <div id="authSection" aria-label="Authentication">
@@ -23,6 +37,48 @@
           <div id="userInfo"></div>
         </div>
       </header>
+
+      <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+      <aside class="app-drawer" id="appDrawer" aria-label="App menu" hidden>
+        <div class="drawer-header">
+          <h2>Menu</h2>
+          <button
+            class="drawer-close"
+            id="drawerClose"
+            type="button"
+            aria-label="Close menu"
+          >
+            X
+          </button>
+        </div>
+
+        <section class="drawer-profile" aria-label="Profile">
+          <div class="profile-avatar" id="profileAvatar" aria-hidden="true">?</div>
+          <div class="profile-details">
+            <p class="profile-kicker">Profile</p>
+            <h3 id="profileName">Not signed in</h3>
+            <p id="profileEmail">Sign in with Google to sync your tracker.</p>
+          </div>
+          <div class="profile-summary" aria-label="Profile summary">
+            <div>
+              <span id="profileShows">0</span>
+              <small>Shows</small>
+            </div>
+            <div>
+              <span id="profileEpisodes">0</span>
+              <small>Episodes</small>
+            </div>
+            <div>
+              <span id="profileStatus">Offline</span>
+              <small>Status</small>
+            </div>
+          </div>
+        </section>
+
+        <nav class="drawer-nav" aria-label="Drawer navigation">
+          <a href="features.html">Tracker Features</a>
+        </nav>
+      </aside>
 
       <section class="stats-grid" aria-label="Tracker statistics">
         <article class="stat-card">

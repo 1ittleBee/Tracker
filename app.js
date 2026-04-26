@@ -35,6 +35,10 @@ const elements = {
   signInBtn: document.getElementById("signInBtn"),
   signOutBtn: document.getElementById("signOutBtn"),
   userInfo: document.getElementById("userInfo"),
+  drawerToggle: document.getElementById("drawerToggle"),
+  drawerClose: document.getElementById("drawerClose"),
+  drawerBackdrop: document.getElementById("drawerBackdrop"),
+  appDrawer: document.getElementById("appDrawer"),
   showNames: document.getElementById("showNames"),
   addShowsBtn: document.getElementById("addShowsBtn"),
   exportJSONBtn: document.getElementById("exportJSONBtn"),
@@ -56,6 +60,12 @@ const elements = {
   episodesWatchedStat: document.getElementById("episodesWatchedStat"),
   mostUsedStat: document.getElementById("mostUsedStat"),
   mostUsedNote: document.getElementById("mostUsedNote"),
+  profileAvatar: document.getElementById("profileAvatar"),
+  profileName: document.getElementById("profileName"),
+  profileEmail: document.getElementById("profileEmail"),
+  profileShows: document.getElementById("profileShows"),
+  profileEpisodes: document.getElementById("profileEpisodes"),
+  profileStatus: document.getElementById("profileStatus"),
 };
 
 const appControls = [
@@ -96,6 +106,52 @@ function setAppControlsEnabled(enabled) {
   });
   elements.signInBtn.disabled = enabled;
   elements.signOutBtn.disabled = !enabled;
+}
+
+function setDrawerOpen(isOpen) {
+  elements.appDrawer.hidden = !isOpen;
+  elements.drawerBackdrop.hidden = !isOpen;
+  elements.drawerToggle.setAttribute("aria-expanded", String(isOpen));
+
+  if (isOpen) {
+    elements.drawerClose.focus();
+  } else {
+    elements.drawerToggle.focus();
+  }
+}
+
+function renderProfile(user) {
+  const entries = Object.entries(shows);
+  const totalShows = entries.length;
+  const episodesWatched = entries.reduce((total, [, data]) => total + data.ep, 0);
+
+  elements.profileShows.textContent = totalShows;
+  elements.profileEpisodes.textContent = episodesWatched;
+
+  if (!user) {
+    elements.profileAvatar.textContent = "?";
+    elements.profileName.textContent = "Not signed in";
+    elements.profileEmail.textContent = "Sign in with Google to sync your tracker.";
+    elements.profileStatus.textContent = "Offline";
+    return;
+  }
+
+  const displayName = user.displayName || "Donghua fan";
+  const initial = displayName.trim().charAt(0) || user.email?.charAt(0) || "?";
+
+  elements.profileAvatar.textContent = "";
+  if (user.photoURL) {
+    const avatarImage = document.createElement("img");
+    avatarImage.src = user.photoURL;
+    avatarImage.alt = "";
+    elements.profileAvatar.appendChild(avatarImage);
+  } else {
+    elements.profileAvatar.textContent = initial;
+  }
+
+  elements.profileName.textContent = displayName;
+  elements.profileEmail.textContent = user.email || "Google account connected";
+  elements.profileStatus.textContent = "Online";
 }
 
 function stopRealtime() {
@@ -411,6 +467,8 @@ function updateStats() {
     elements.mostUsedStat.removeAttribute("title");
     elements.mostUsedNote.textContent = "No usage yet";
   }
+
+  renderProfile(auth.currentUser);
 }
 
 function showEmptyState(message, detail) {
@@ -539,6 +597,15 @@ function render() {
 }
 
 function bindEvents() {
+  elements.drawerToggle.addEventListener("click", () => setDrawerOpen(true));
+  elements.drawerClose.addEventListener("click", () => setDrawerOpen(false));
+  elements.drawerBackdrop.addEventListener("click", () => setDrawerOpen(false));
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !elements.appDrawer.hidden) {
+      setDrawerOpen(false);
+    }
+  });
+
   elements.signInBtn.addEventListener("click", async () => {
     try {
       await signInWithPopup(auth, provider);
@@ -558,6 +625,7 @@ function bindEvents() {
   onAuthStateChanged(auth, (user) => {
     if (user) {
       elements.userInfo.textContent = `Logged in as: ${user.email}`;
+      renderProfile(user);
       setAppControlsEnabled(true);
       initRealtime();
     } else {
@@ -565,6 +633,7 @@ function bindEvents() {
       elements.userInfo.textContent = "Not signed in";
       setAppControlsEnabled(false);
       shows = {};
+      renderProfile(null);
       render();
     }
   });
