@@ -120,6 +120,61 @@ function setDrawerOpen(isOpen) {
   }
 }
 
+function scrollToElement(element) {
+  element?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function focusElement(element) {
+  window.setTimeout(() => element?.focus(), 250);
+}
+
+function handleFeatureHash({ scroll = true } = {}) {
+  const action = window.location.hash.slice(1);
+  if (!action) return;
+
+  const controlPanel = elements.showNames.closest(".panel");
+  const actionHandlers = {
+    "add-shows": () => {
+      scrollToElement(controlPanel);
+      focusElement(elements.showNames);
+    },
+    "add-episode": () => {
+      if (scroll) scrollToElement(elements.showList);
+    },
+    "manage-shows": () => {
+      if (scroll) scrollToElement(elements.showList);
+    },
+    history: () => {
+      if (scroll) scrollToElement(elements.showList);
+    },
+    "search-sort": () => {
+      scrollToElement(elements.searchInput);
+      focusElement(elements.searchInput);
+    },
+    "frequently-used": () => {
+      showFrequent();
+      if (scroll) scrollToElement(elements.showList);
+    },
+    backup: () => {
+      scrollToElement(controlPanel);
+      focusElement(elements.exportJSONBtn);
+    },
+    theme: () => {
+      toggleDarkMode();
+      scrollToElement(elements.darkModeBtn);
+      window.history.replaceState(null, "", window.location.pathname);
+    },
+  };
+
+  actionHandlers[action]?.();
+}
+
+function applyPersistentFeatureHash() {
+  if (window.location.hash === "#frequently-used") {
+    showFrequent();
+  }
+}
+
 function renderProfile(user) {
   const entries = Object.entries(shows);
   const totalShows = entries.length;
@@ -594,6 +649,7 @@ function render() {
     elements.showList.appendChild(createShowRow(show, data));
   });
   elements.pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+  applyPersistentFeatureHash();
 }
 
 function bindEvents() {
@@ -651,8 +707,10 @@ function bindEvents() {
   elements.jumpPage.addEventListener("input", jumpToPage);
   elements.prevBtn.addEventListener("click", prevPage);
   elements.nextBtn.addEventListener("click", nextPage);
+  window.addEventListener("hashchange", handleFeatureHash);
 }
 
 setAppControlsEnabled(false);
 bindEvents();
 render();
+handleFeatureHash();

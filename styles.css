@@ -328,6 +328,19 @@ h1 {
   box-shadow: 0 12px 30px rgba(17, 24, 39, 0.06);
 }
 
+.feature-link {
+  display: block;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.feature-link:hover,
+.feature-link:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+  color: var(--primary);
+  outline: none;
+}
+
 .feature-card h2 {
   margin: 0 0 10px;
   font-size: 1.1rem;
