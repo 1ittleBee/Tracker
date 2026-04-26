@@ -339,6 +339,46 @@ h1 {
   line-height: 1.5;
 }
 
+.function-panel {
+  max-width: 760px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.function-panel h2 {
+  margin: 0 0 10px;
+  font-size: 1.25rem;
+}
+
+.function-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.action-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin-top: 18px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.action-link:hover,
+.action-link:focus-visible {
+  background: var(--primary-hover);
+  outline: none;
+}
+
 .panel {
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   border: 1px solid var(--border);
