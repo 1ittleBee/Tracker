@@ -13,21 +13,71 @@
         <div>
           <h1>Profile</h1>
           <p class="subtitle">
-            View your Google account details and tracker summary from the app
-            drawer after signing in.
+            Review your tracker totals, favorite title, update activity, and
+            recent episode history.
           </p>
         </div>
-        <a class="back-link" href="index.html" aria-label="Back to tracker">←</a>
+        <a class="back-link" href="index.html" aria-label="Back to tracker">&larr;</a>
       </header>
 
-      <section class="function-panel" aria-label="Profile details">
-        <h2>What this page does</h2>
-        <p>
-          The drawer profile shows your account name, email, avatar, saved show
-          count, watched episode count, and online status.
-        </p>
-        <a class="action-link" href="index.html">Open Profile Drawer</a>
+      <section class="profile-page-card" aria-label="Account profile">
+        <div class="profile-avatar profile-page-avatar" id="dashboardAvatar">?</div>
+        <div class="profile-details">
+          <p class="profile-kicker">Account</p>
+          <h2 id="dashboardName">Not signed in</h2>
+          <p id="dashboardEmail">Sign in from the tracker drawer to view stats.</p>
+        </div>
+      </section>
+
+      <section class="stats-grid dashboard-grid" aria-label="Profile statistics">
+        <article class="stat-card">
+          <p class="stat-label">Total Shows</p>
+          <p class="stat-value" id="dashboardTotalShows">0</p>
+          <p class="stat-note">Saved titles</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label">Completed Shows</p>
+          <p class="stat-value" id="dashboardCompletedShows">0</p>
+          <p class="stat-note">Marked completed</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label">Favorite Show</p>
+          <p class="stat-value" id="dashboardFavoriteShow">-</p>
+          <p class="stat-note" id="dashboardFavoriteNote">Highest episode count</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label">Most Updated</p>
+          <p class="stat-value" id="dashboardMostUpdated">-</p>
+          <p class="stat-note" id="dashboardMostUpdatedNote">No updates yet</p>
+        </article>
+      </section>
+
+      <section class="dashboard-layout" aria-label="Profile dashboard">
+        <article class="panel dashboard-panel">
+          <h2>Watch Summary</h2>
+          <dl class="summary-list">
+            <div>
+              <dt>Episodes watched</dt>
+              <dd id="dashboardEpisodesWatched">0</dd>
+            </div>
+            <div>
+              <dt>In progress</dt>
+              <dd id="dashboardInProgress">0</dd>
+            </div>
+            <div>
+              <dt>Average episode</dt>
+              <dd id="dashboardAverageEpisode">0</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="panel dashboard-panel">
+          <h2>Recent History</h2>
+          <div class="activity-list" id="dashboardHistory"></div>
+        </article>
       </section>
     </main>
+
+    <script type="module" src="profile-dashboard.js"></script>
   </body>
 </html>
