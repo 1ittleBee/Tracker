@@ -179,10 +179,13 @@ h1 {
   grid-template-rows: auto auto 1fr;
   gap: 16px;
   width: min(360px, calc(100vw - 36px));
+  max-height: 100vh;
   padding: 18px;
+  overflow-y: auto;
   border-right: 1px solid var(--border);
   background: var(--surface);
   box-shadow: var(--shadow);
+  overscroll-behavior: contain;
 }
 
 .drawer-header {

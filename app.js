@@ -96,7 +96,7 @@ const appControls = [
   elements.jumpPage,
   elements.prevBtn,
   elements.nextBtn,
-];
+].filter(Boolean);
 
 let shows = {};
 let currentPage = 1;
@@ -170,15 +170,18 @@ function focusElement(element) {
   window.setTimeout(() => element?.focus(), 250);
 }
 
+function bindClick(element, handler) {
+  element?.addEventListener("click", handler);
+}
+
 function handleFeatureHash({ scroll = true } = {}) {
   const action = window.location.hash.slice(1);
   if (!action) return;
 
-  const controlPanel = elements.showNames.closest(".panel");
+  const controlPanel = elements.searchInput.closest(".panel");
   const actionHandlers = {
     "add-shows": () => {
-      scrollToElement(controlPanel);
-      focusElement(elements.showNames);
+      window.location.href = "add-shows.html";
     },
     "add-episode": () => {
       if (scroll) scrollToElement(elements.showList);
@@ -199,11 +202,10 @@ function handleFeatureHash({ scroll = true } = {}) {
     },
     backup: () => {
       scrollToElement(controlPanel);
-      focusElement(elements.exportJSONBtn);
     },
     theme: () => {
       toggleDarkMode();
-      scrollToElement(elements.darkModeBtn);
+      scrollToElement(controlPanel);
       window.history.replaceState(null, "", window.location.pathname);
     },
   };
@@ -310,6 +312,7 @@ async function saveShowToDB(name) {
 
 async function addShows() {
   if (!auth.currentUser) return alert("Please sign in");
+  if (!elements.showNames) return;
   const input = elements.showNames.value.trim();
   if (!input) return;
 
@@ -749,30 +752,30 @@ function bindEvents() {
     }
   });
 
-  elements.addShowsBtn.addEventListener("click", addShows);
-  elements.exportJSONBtn.addEventListener("click", exportJSON);
-  elements.importBtn.addEventListener("click", () => elements.importFile.click());
+  bindClick(elements.addShowsBtn, addShows);
+  bindClick(elements.exportJSONBtn, exportJSON);
+  bindClick(elements.importBtn, () => elements.importFile.click());
   elements.importFile.addEventListener("change", handleImport);
-  elements.exportCSVBtn.addEventListener("click", exportCSV);
-  elements.darkModeBtn.addEventListener("click", toggleDarkMode);
-  elements.frequentBtn.addEventListener("click", showFrequent);
-  elements.drawerExportJSONBtn.addEventListener("click", () => {
+  bindClick(elements.exportCSVBtn, exportCSV);
+  bindClick(elements.darkModeBtn, toggleDarkMode);
+  bindClick(elements.frequentBtn, showFrequent);
+  bindClick(elements.drawerExportJSONBtn, () => {
     exportJSON();
     setDrawerOpen(false);
   });
-  elements.drawerImportBtn.addEventListener("click", () => {
+  bindClick(elements.drawerImportBtn, () => {
     elements.importFile.click();
     setDrawerOpen(false);
   });
-  elements.drawerExportCSVBtn.addEventListener("click", () => {
+  bindClick(elements.drawerExportCSVBtn, () => {
     exportCSV();
     setDrawerOpen(false);
   });
-  elements.drawerDarkModeBtn.addEventListener("click", () => {
+  bindClick(elements.drawerDarkModeBtn, () => {
     toggleDarkMode();
     setDrawerOpen(false);
   });
-  elements.drawerFrequentBtn.addEventListener("click", () => {
+  bindClick(elements.drawerFrequentBtn, () => {
     showFrequent();
     setDrawerOpen(false);
     scrollToElement(elements.showList);

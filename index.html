@@ -133,24 +133,12 @@
       </section>
 
       <section class="panel" aria-label="Tracker controls">
-        <div class="controls">
-          <textarea
-            id="showNames"
-            placeholder="Enter donghua names, one per line"
-          ></textarea>
-          <button class="add-btn" id="addShowsBtn">+ Add Shows</button>
-          <button class="export-btn" id="exportJSONBtn">Export JSON</button>
-          <button class="import-btn" id="importBtn">Import JSON</button>
-          <input
-            type="file"
-            id="importFile"
-            accept="application/json,.json"
-            hidden
-          />
-          <button class="export-btn" id="exportCSVBtn">Export CSV</button>
-          <button class="export-btn" id="darkModeBtn">Dark Mode</button>
-          <button class="freq-btn" id="frequentBtn">Frequently Used</button>
-        </div>
+        <input
+          type="file"
+          id="importFile"
+          accept="application/json,.json"
+          hidden
+        />
 
         <div class="search-sort">
           <input type="text" id="searchInput" placeholder="Search shows..." />
