@@ -8,9 +8,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import {
   getAuth,
-  signInWithPopup,
-  GoogleAuthProvider,
-  signOut as firebaseSignOut,
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
@@ -27,12 +24,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
 
 const elements = {
-  signInBtn: document.getElementById("addPageSignInBtn"),
-  signOutBtn: document.getElementById("addPageSignOutBtn"),
-  userInfo: document.getElementById("addPageUserInfo"),
   showNames: document.getElementById("addPageShowNames"),
   addShowsBtn: document.getElementById("addPageAddShowsBtn"),
   status: document.getElementById("addPageStatus"),
@@ -45,8 +38,6 @@ function setStatus(message) {
 function setSignedIn(enabled) {
   elements.showNames.disabled = !enabled;
   elements.addShowsBtn.disabled = !enabled;
-  elements.signInBtn.disabled = enabled;
-  elements.signOutBtn.disabled = !enabled;
 }
 
 function isValidShowName(name) {
@@ -117,34 +108,15 @@ async function addShows() {
   }
 }
 
-elements.signInBtn.addEventListener("click", async () => {
-  try {
-    await signInWithPopup(auth, provider);
-  } catch (error) {
-    setStatus("Sign-in failed: " + error.message);
-  }
-});
-
-elements.signOutBtn.addEventListener("click", async () => {
-  try {
-    await firebaseSignOut(auth);
-  } catch (error) {
-    console.error(error);
-    setStatus("Sign-out failed.");
-  }
-});
-
 elements.addShowsBtn.addEventListener("click", addShows);
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    elements.userInfo.textContent = `Logged in as: ${user.email}`;
     setSignedIn(true);
     setStatus("");
   } else {
-    elements.userInfo.textContent = "Not signed in";
     setSignedIn(false);
-    setStatus("Sign in to add shows.");
+    setStatus("Sign in from the tracker page to add shows here.");
   }
 });
 

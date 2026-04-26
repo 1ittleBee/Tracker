@@ -44,6 +44,12 @@ const elements = {
   drawerExportCSVBtn: document.getElementById("drawerExportCSVBtn"),
   drawerDarkModeBtn: document.getElementById("drawerDarkModeBtn"),
   drawerFrequentBtn: document.getElementById("drawerFrequentBtn"),
+  confirmBackdrop: document.getElementById("confirmBackdrop"),
+  confirmDialog: document.getElementById("confirmDialog"),
+  confirmTitle: document.getElementById("confirmTitle"),
+  confirmMessage: document.getElementById("confirmMessage"),
+  confirmCancelBtn: document.getElementById("confirmCancelBtn"),
+  confirmOkBtn: document.getElementById("confirmOkBtn"),
   showNames: document.getElementById("showNames"),
   addShowsBtn: document.getElementById("addShowsBtn"),
   exportJSONBtn: document.getElementById("exportJSONBtn"),
@@ -97,6 +103,7 @@ let currentPage = 1;
 let showsPerPage = 10;
 let darkMode = localStorage.getItem("darkMode") === "true";
 let unsubscribeShows = null;
+let pendingConfirmation = null;
 
 document.body.classList.toggle("dark-mode", darkMode);
 
@@ -127,6 +134,32 @@ function setDrawerOpen(isOpen) {
   } else {
     elements.drawerToggle.focus();
   }
+}
+
+function closeConfirmDialog(result) {
+  if (!pendingConfirmation) return;
+
+  elements.confirmDialog.hidden = true;
+  elements.confirmBackdrop.hidden = true;
+  elements.confirmBackdrop.setAttribute("aria-hidden", "true");
+  pendingConfirmation.resolve(result);
+  pendingConfirmation = null;
+}
+
+function showConfirmDialog({ title, message, confirmText = "Confirm" }) {
+  if (pendingConfirmation) closeConfirmDialog(false);
+
+  elements.confirmTitle.textContent = title;
+  elements.confirmMessage.textContent = message;
+  elements.confirmOkBtn.textContent = confirmText;
+  elements.confirmBackdrop.hidden = false;
+  elements.confirmDialog.hidden = false;
+  elements.confirmBackdrop.setAttribute("aria-hidden", "false");
+  elements.confirmCancelBtn.focus();
+
+  return new Promise((resolve) => {
+    pendingConfirmation = { resolve };
+  });
 }
 
 function scrollToElement(element) {
@@ -380,7 +413,12 @@ async function editShowName(oldName) {
 
 async function deleteShow(show) {
   if (!auth.currentUser) return alert("Please sign in");
-  if (!confirm(`Delete ${show}?`)) return;
+  const confirmed = await showConfirmDialog({
+    title: "Delete show?",
+    message: `Delete ${show}? This cannot be undone.`,
+    confirmText: "Delete",
+  });
+  if (!confirmed) return;
 
   try {
     await deleteDoc(getShowRef(show));
@@ -665,7 +703,15 @@ function bindEvents() {
   elements.drawerToggle.addEventListener("click", () => setDrawerOpen(true));
   elements.drawerClose.addEventListener("click", () => setDrawerOpen(false));
   elements.drawerBackdrop.addEventListener("click", () => setDrawerOpen(false));
+  elements.confirmBackdrop.addEventListener("click", () => closeConfirmDialog(false));
+  elements.confirmCancelBtn.addEventListener("click", () => closeConfirmDialog(false));
+  elements.confirmOkBtn.addEventListener("click", () => closeConfirmDialog(true));
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !elements.confirmDialog.hidden) {
+      closeConfirmDialog(false);
+      return;
+    }
+
     if (event.key === "Escape" && !elements.appDrawer.hidden) {
       setDrawerOpen(false);
     }
