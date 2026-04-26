@@ -52,6 +52,7 @@ function normalizeShow(data = {}) {
       : 0,
     status: String(data.status || "").toLowerCase(),
     completed: Boolean(data.completed),
+    favorite: Boolean(data.favorite),
     created: Number.isFinite(Number(data.created)) ? Number(data.created) : 0,
   };
 }
@@ -135,10 +136,12 @@ function renderDashboard(shows) {
   const episodesWatched = entries.reduce((total, [, data]) => total + data.ep, 0);
   const inProgress = entries.filter(([, data]) => data.ep > 0 && data.status !== "completed").length;
   const averageEpisode = totalShows > 0 ? Math.round(episodesWatched / totalShows) : 0;
-  const favorite = entries.reduce(
+  const pinnedFavorite = entries.find(([, data]) => data.favorite);
+  const episodeFavorite = entries.reduce(
     (top, entry) => (!top || entry[1].ep > top[1].ep ? entry : top),
     null
   );
+  const favorite = pinnedFavorite || episodeFavorite;
   const mostUpdated = entries.reduce(
     (top, entry) => (!top || entry[1].usage > top[1].usage ? entry : top),
     null
@@ -159,9 +162,11 @@ function renderDashboard(shows) {
   elements.inProgress.textContent = inProgress;
   elements.averageEpisode.textContent = averageEpisode;
 
-  if (favorite && favorite[1].ep > 0) {
+  if (favorite && (favorite[1].favorite || favorite[1].ep > 0)) {
     setTextWithTitle(elements.favoriteShow, favorite[0]);
-    elements.favoriteNote.textContent = `Episode ${favorite[1].ep}`;
+    elements.favoriteNote.textContent = favorite[1].favorite
+      ? "Pinned favorite"
+      : `Episode ${favorite[1].ep}`;
   } else {
     setTextWithTitle(elements.favoriteShow, "-");
     elements.favoriteNote.textContent = "Highest episode count";

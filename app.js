@@ -44,6 +44,7 @@ const elements = {
   drawerExportCSVBtn: document.getElementById("drawerExportCSVBtn"),
   drawerDarkModeBtn: document.getElementById("drawerDarkModeBtn"),
   drawerFrequentBtn: document.getElementById("drawerFrequentBtn"),
+  drawerCalendarBtn: document.getElementById("drawerCalendarBtn"),
   confirmBackdrop: document.getElementById("confirmBackdrop"),
   confirmDialog: document.getElementById("confirmDialog"),
   confirmTitle: document.getElementById("confirmTitle"),
@@ -90,6 +91,7 @@ const appControls = [
   elements.drawerImportBtn,
   elements.drawerExportCSVBtn,
   elements.drawerFrequentBtn,
+  elements.drawerCalendarBtn,
   elements.searchInput,
   elements.sortSelect,
   elements.pageSizeSelect,
@@ -104,6 +106,9 @@ let showsPerPage = 10;
 let darkMode = localStorage.getItem("darkMode") === "true";
 let unsubscribeShows = null;
 let pendingConfirmation = null;
+let pendingSync = JSON.parse(localStorage.getItem("pendingSync") || "[]");
+const CACHE_KEY = "donghuaShowsCache";
+const SYNC_KEY = "pendingSync";
 
 document.body.classList.toggle("dark-mode", darkMode);
 
@@ -122,6 +127,107 @@ function setAppControlsEnabled(enabled) {
   });
   elements.signInBtn.disabled = enabled;
   elements.signOutBtn.disabled = !enabled;
+}
+
+function showToast(message, action) {
+  const stack = document.getElementById("toastStack");
+  const toast = document.createElement("div");
+  toast.className = "toast";
+
+  const text = document.createElement("span");
+  text.textContent = message;
+  toast.appendChild(text);
+
+  if (action) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = action.label;
+    button.addEventListener("click", () => {
+      action.onClick();
+      toast.remove();
+    });
+    toast.appendChild(button);
+  }
+
+  stack.appendChild(toast);
+  window.setTimeout(() => toast.remove(), action ? 8000 : 4200);
+}
+
+function isRemoteReady() {
+  return Boolean(auth.currentUser && navigator.onLine);
+}
+
+function persistCache() {
+  localStorage.setItem(CACHE_KEY, JSON.stringify(shows));
+}
+
+function loadCachedShows() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
+    shows = Object.fromEntries(
+      Object.entries(cached).map(([name, data]) => [name, normalizeShow(data)])
+    );
+  } catch (error) {
+    shows = {};
+  }
+}
+
+function saveQueue() {
+  localStorage.setItem(SYNC_KEY, JSON.stringify(pendingSync));
+}
+
+function queueSet(show, data) {
+  pendingSync = pendingSync.filter((operation) => operation.show !== show);
+  pendingSync.push({ type: "set", show, data });
+  saveQueue();
+}
+
+function queueDelete(show) {
+  pendingSync = pendingSync.filter((operation) => operation.show !== show);
+  pendingSync.push({ type: "delete", show });
+  saveQueue();
+}
+
+async function syncPendingChanges() {
+  if (!isRemoteReady() || pendingSync.length === 0) return;
+
+  const operations = [...pendingSync];
+  pendingSync = [];
+  saveQueue();
+
+  try {
+    for (const operation of operations) {
+      if (operation.type === "delete") {
+        await deleteDoc(getShowRef(operation.show));
+      } else {
+        await setDoc(getShowRef(operation.show), normalizeShow(operation.data));
+      }
+    }
+    showToast("Offline changes synced.");
+  } catch (error) {
+    pendingSync = [...operations, ...pendingSync];
+    saveQueue();
+    showToast("Sync paused. Will retry when online.");
+  }
+}
+
+async function saveLocalAndRemote(show, data, { queue = true } = {}) {
+  shows[show] = normalizeShow(data);
+  persistCache();
+  render();
+
+  if (!isRemoteReady()) {
+    if (queue) queueSet(show, shows[show]);
+    showToast("Saved offline. Will sync later.");
+    return;
+  }
+
+  try {
+    await setDoc(getShowRef(show), shows[show]);
+  } catch (error) {
+    if (queue) queueSet(show, shows[show]);
+    showToast("Saved locally. Will sync later.");
+  }
 }
 
 function setDrawerOpen(isOpen) {
@@ -262,7 +368,7 @@ function stopRealtime() {
 
 function isValidShowName(name) {
   if (!name || name.includes("/")) {
-    alert('Show names cannot be empty or contain "/".');
+    showToast('Show names cannot be empty or contain "/".');
     return false;
   }
   return true;
@@ -276,6 +382,9 @@ function normalizeShow(data = {}) {
     usage: Number.isFinite(Number(data.usage))
       ? Math.max(0, Number(data.usage))
       : 0,
+    favorite: Boolean(data.favorite),
+    completed: Boolean(data.completed),
+    status: String(data.status || ""),
     created: Number.isFinite(Number(data.created))
       ? Number(data.created)
       : Date.now(),
@@ -291,27 +400,26 @@ function initRealtime() {
       snapshot.forEach((docSnap) => {
         shows[docSnap.id] = normalizeShow(docSnap.data());
       });
+      persistCache();
       render();
+      syncPendingChanges();
     },
     (error) => {
       console.error("Realtime listener failed:", error);
-      alert("Could not load your shows. Check Firestore permissions.");
+      showToast("Could not load remote shows. Using cached data.");
+      loadCachedShows();
+      render();
     }
   );
 }
 
 async function saveShowToDB(name) {
-  if (!auth.currentUser) return alert("Please sign in");
-  try {
-    await setDoc(getShowRef(name), shows[name]);
-  } catch (error) {
-    console.error("Error saving show:", error);
-    throw error;
-  }
+  if (!auth.currentUser) return showToast("Please sign in.");
+  await saveLocalAndRemote(name, shows[name]);
 }
 
 async function addShows() {
-  if (!auth.currentUser) return alert("Please sign in");
+  if (!auth.currentUser) return showToast("Please sign in.");
   if (!elements.showNames) return;
   const input = elements.showNames.value.trim();
   if (!input) return;
@@ -333,15 +441,33 @@ async function addShows() {
     elements.showNames.value = "";
     render();
   } catch (error) {
-    alert("Failed to save one or more shows.");
+    showToast("Failed to save one or more shows.");
   }
 }
 
 async function changeEpisode(show, direction) {
-  if (!auth.currentUser) return alert("Please sign in");
-  const showRef = getShowRef(show);
+  if (!auth.currentUser && navigator.onLine) return showToast("Please sign in.");
+  const current = normalizeShow(shows[show]);
+  const oldEp = current.ep;
+  const newEp = oldEp + direction;
+  if (newEp < 0) return;
+  const nextShow = {
+    ...current,
+    ep: newEp,
+    history: [
+      ...current.history,
+      `${oldEp} -> ${newEp} on ${new Date().toLocaleDateString()}`,
+    ],
+    usage: current.usage + 1,
+  };
+
+  if (!isRemoteReady()) {
+    await saveLocalAndRemote(show, nextShow);
+    return;
+  }
 
   try {
+    const showRef = getShowRef(show);
     await runTransaction(db, async (transaction) => {
       const docSnap = await transaction.get(showRef);
       if (!docSnap.exists()) return;
@@ -361,15 +487,30 @@ async function changeEpisode(show, direction) {
       });
     });
   } catch (error) {
-    console.error(error);
+    await saveLocalAndRemote(show, nextShow);
   }
 }
 
 async function updateEpisode(show) {
-  if (!auth.currentUser) return alert("Please sign in");
+  if (!auth.currentUser && navigator.onLine) return showToast("Please sign in.");
   const epInput = prompt(`Enter last watched episode for ${show}:`);
   const ep = parseInt(epInput, 10);
   if (isNaN(ep) || ep < 0) return;
+  const current = normalizeShow(shows[show]);
+  const nextShow = {
+    ...current,
+    ep,
+    history: [
+      ...current.history,
+      `${current.ep} -> ${ep} on ${new Date().toLocaleDateString()}`,
+    ],
+    usage: current.usage + 1,
+  };
+
+  if (!isRemoteReady()) {
+    await saveLocalAndRemote(show, nextShow);
+    return;
+  }
 
   const showRef = getShowRef(show);
   try {
@@ -388,14 +529,25 @@ async function updateEpisode(show) {
       });
     });
   } catch (error) {
-    console.error(error);
+    await saveLocalAndRemote(show, nextShow);
   }
 }
 
 async function editShowName(oldName) {
-  if (!auth.currentUser) return alert("Please sign in");
+  if (!auth.currentUser && navigator.onLine) return showToast("Please sign in.");
   const newName = prompt("Edit donghua name:", oldName)?.trim();
   if (!newName || newName === oldName || !isValidShowName(newName)) return;
+
+  if (!isRemoteReady()) {
+    shows[newName] = normalizeShow(shows[oldName]);
+    delete shows[oldName];
+    persistCache();
+    queueDelete(oldName);
+    queueSet(newName, shows[newName]);
+    render();
+    showToast("Rename saved offline. Will sync later.");
+    return;
+  }
 
   const oldRef = getShowRef(oldName);
   const newRef = getShowRef(newName);
@@ -404,7 +556,7 @@ async function editShowName(oldName) {
       const oldSnap = await transaction.get(oldRef);
       const newSnap = await transaction.get(newRef);
       if (!oldSnap.exists()) return;
-      if (newSnap.exists()) return alert("A show with this name already exists.");
+      if (newSnap.exists()) return showToast("A show with this name already exists.");
 
       transaction.set(newRef, oldSnap.data());
       transaction.delete(oldRef);
@@ -415,7 +567,7 @@ async function editShowName(oldName) {
 }
 
 async function deleteShow(show) {
-  if (!auth.currentUser) return alert("Please sign in");
+  if (!auth.currentUser && navigator.onLine) return showToast("Please sign in.");
   const confirmed = await showConfirmDialog({
     title: "Delete show?",
     message: `Delete ${show}? This cannot be undone.`,
@@ -423,11 +575,37 @@ async function deleteShow(show) {
   });
   if (!confirmed) return;
 
+  const deletedShow = shows[show];
+  delete shows[show];
+  persistCache();
+  render();
+  queueDelete(show);
+  showToast(`${show} deleted.`, {
+    label: "Undo",
+    onClick: () => {
+      saveLocalAndRemote(show, deletedShow);
+      showToast(`${show} restored.`);
+    },
+  });
+
+  if (!isRemoteReady()) return;
+
   try {
     await deleteDoc(getShowRef(show));
+    pendingSync = pendingSync.filter((operation) => operation.show !== show);
+    saveQueue();
   } catch (error) {
-    console.error(error);
+    showToast("Delete saved locally. Will sync later.");
   }
+}
+
+async function toggleFavorite(show) {
+  const current = normalizeShow(shows[show]);
+  await saveLocalAndRemote(show, {
+    ...current,
+    favorite: !current.favorite,
+  });
+  showToast(current.favorite ? "Removed from favorites." : "Pinned to favorites.");
 }
 
 function toggleDarkMode() {
@@ -444,7 +622,7 @@ function exportJSON() {
 }
 
 function handleImport(event) {
-  if (!auth.currentUser) return alert("Please sign in");
+  if (!auth.currentUser) return showToast("Please sign in.");
   const file = event.target.files[0];
   if (!file) return;
 
@@ -469,10 +647,10 @@ function handleImport(event) {
         })
       );
       render();
-      alert("Import successful!");
+      showToast("Import successful.");
     } catch (error) {
       console.error(error);
-      alert("Import failed");
+      showToast("Import failed.");
     } finally {
       event.target.value = "";
     }
@@ -545,6 +723,7 @@ function filteredShows() {
   if (sortBy === "created") result.sort((a, b) => a[1].created - b[1].created);
   if (sortBy === "name") result.sort((a, b) => a[0].localeCompare(b[0]));
   if (sortBy === "ep") result.sort((a, b) => b[1].ep - a[1].ep);
+  result.sort((a, b) => Number(b[1].favorite) - Number(a[1].favorite));
 
   return result;
 }
@@ -611,7 +790,7 @@ function createShowRow(show, data, includeUsage = false) {
 
 function createShowTitle(show) {
   const title = document.createElement("strong");
-  title.textContent = show;
+  title.textContent = `${shows[show]?.favorite ? "★ " : ""}${show}`;
   return title;
 }
 
@@ -631,6 +810,13 @@ function createShowMeta(data, includeUsage) {
     metaDiv.appendChild(usageBadge);
   }
 
+  if (data.favorite) {
+    const favoriteBadge = document.createElement("span");
+    favoriteBadge.className = "favorite-badge";
+    favoriteBadge.textContent = "Pinned";
+    metaDiv.appendChild(favoriteBadge);
+  }
+
   return metaDiv;
 }
 
@@ -645,6 +831,7 @@ function createHistory(data) {
 
 function createShowButtons(show) {
   const buttonConfigs = [
+    [shows[show]?.favorite ? "★" : "☆", "favorite-btn", `Pin ${show}`, () => toggleFavorite(show)],
     ["+", "inc-btn", `Increase episode for ${show}`, () => changeEpisode(show, 1)],
     ["-", "dec-btn", `Decrease episode for ${show}`, () => changeEpisode(show, -1)],
     ["Edit ep", "update-btn", `Edit episode for ${show}`, () => updateEpisode(show)],
@@ -676,6 +863,56 @@ function showFrequent() {
     elements.showList.appendChild(createShowRow(show, data, true));
   });
   elements.pageInfo.textContent = "Top 10 frequently used shows";
+}
+
+function getHistoryDate(entry) {
+  const [, dateText] = entry.split(" on ");
+  const timestamp = Date.parse(dateText || "");
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function showCalendar() {
+  const activities = Object.entries(shows)
+    .flatMap(([show, data]) =>
+      data.history.map((entry) => ({
+        show,
+        entry,
+        timestamp: getHistoryDate(entry),
+      }))
+    )
+    .sort((a, b) => b.timestamp - a.timestamp);
+
+  elements.showList.innerHTML = "";
+  if (activities.length === 0) {
+    showEmptyState("No watch calendar yet", "Update episodes to build your calendar.");
+    elements.pageInfo.textContent = "Watch Calendar";
+    return;
+  }
+
+  const calendar = document.createElement("div");
+  calendar.className = "calendar-list";
+  activities.slice(0, 30).forEach((activity) => {
+    const card = document.createElement("article");
+    card.className = "calendar-card";
+
+    const date = document.createElement("time");
+    date.textContent = activity.timestamp
+      ? new Date(activity.timestamp).toLocaleDateString()
+      : "Recent";
+    card.appendChild(date);
+
+    const title = document.createElement("strong");
+    title.textContent = activity.show;
+    card.appendChild(title);
+
+    const detail = document.createElement("span");
+    detail.textContent = activity.entry;
+    card.appendChild(detail);
+    calendar.appendChild(card);
+  });
+
+  elements.showList.appendChild(calendar);
+  elements.pageInfo.textContent = "Watch Calendar";
 }
 
 function render() {
@@ -724,7 +961,7 @@ function bindEvents() {
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {
-      alert("Sign-in failed: " + error.message);
+      showToast("Sign-in failed: " + error.message);
     }
   });
 
@@ -742,11 +979,14 @@ function bindEvents() {
       renderProfile(user);
       setAppControlsEnabled(true);
       initRealtime();
+      syncPendingChanges();
     } else {
       stopRealtime();
       elements.userInfo.textContent = "Not signed in";
-      setAppControlsEnabled(false);
-      shows = {};
+      loadCachedShows();
+      setAppControlsEnabled(Object.keys(shows).length > 0);
+      elements.signInBtn.disabled = false;
+      elements.signOutBtn.disabled = true;
       renderProfile(null);
       render();
     }
@@ -780,6 +1020,11 @@ function bindEvents() {
     setDrawerOpen(false);
     scrollToElement(elements.showList);
   });
+  bindClick(elements.drawerCalendarBtn, () => {
+    showCalendar();
+    setDrawerOpen(false);
+    scrollToElement(elements.showList);
+  });
   elements.searchInput.addEventListener("input", render);
   elements.sortSelect.addEventListener("change", render);
   elements.pageSizeSelect.addEventListener("change", changePageSize);
@@ -787,8 +1032,11 @@ function bindEvents() {
   elements.prevBtn.addEventListener("click", prevPage);
   elements.nextBtn.addEventListener("click", nextPage);
   window.addEventListener("hashchange", handleFeatureHash);
+  window.addEventListener("online", syncPendingChanges);
+  window.addEventListener("offline", () => showToast("Offline mode on. Changes will sync later."));
 }
 
+loadCachedShows();
 setAppControlsEnabled(false);
 bindEvents();
 render();
