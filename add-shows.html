@@ -19,14 +19,26 @@
         <a class="back-link" href="index.html">Back to Tracker</a>
       </header>
 
-      <section class="function-panel" aria-label="Add shows">
-        <h2>How it works</h2>
-        <p>
-          Use the main tracker input to enter titles. When you click Add Shows,
-          each title is saved to Firebase while you are signed in.
-        </p>
-        <a class="action-link" href="index.html#add-shows">Go to Add Shows</a>
+      <section class="panel add-show-page" aria-label="Add shows">
+        <div class="auth-strip">
+          <button id="addPageSignInBtn" type="button">Sign In with Google</button>
+          <button id="addPageSignOutBtn" type="button">Sign Out</button>
+          <span id="addPageUserInfo">Checking sign-in...</span>
+        </div>
+
+        <div class="controls single-action">
+          <textarea
+            id="addPageShowNames"
+            placeholder="Enter donghua names, one per line"
+          ></textarea>
+          <button class="add-btn" id="addPageAddShowsBtn" type="button">
+            + Add Shows
+          </button>
+        </div>
+
+        <p class="form-status" id="addPageStatus" role="status"></p>
       </section>
     </main>
+    <script type="module" src="add-shows.js"></script>
   </body>
 </html>

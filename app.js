@@ -39,6 +39,11 @@ const elements = {
   drawerClose: document.getElementById("drawerClose"),
   drawerBackdrop: document.getElementById("drawerBackdrop"),
   appDrawer: document.getElementById("appDrawer"),
+  drawerExportJSONBtn: document.getElementById("drawerExportJSONBtn"),
+  drawerImportBtn: document.getElementById("drawerImportBtn"),
+  drawerExportCSVBtn: document.getElementById("drawerExportCSVBtn"),
+  drawerDarkModeBtn: document.getElementById("drawerDarkModeBtn"),
+  drawerFrequentBtn: document.getElementById("drawerFrequentBtn"),
   showNames: document.getElementById("showNames"),
   addShowsBtn: document.getElementById("addShowsBtn"),
   exportJSONBtn: document.getElementById("exportJSONBtn"),
@@ -75,6 +80,10 @@ const appControls = [
   elements.importBtn,
   elements.exportCSVBtn,
   elements.frequentBtn,
+  elements.drawerExportJSONBtn,
+  elements.drawerImportBtn,
+  elements.drawerExportCSVBtn,
+  elements.drawerFrequentBtn,
   elements.searchInput,
   elements.sortSelect,
   elements.pageSizeSelect,
@@ -701,6 +710,27 @@ function bindEvents() {
   elements.exportCSVBtn.addEventListener("click", exportCSV);
   elements.darkModeBtn.addEventListener("click", toggleDarkMode);
   elements.frequentBtn.addEventListener("click", showFrequent);
+  elements.drawerExportJSONBtn.addEventListener("click", () => {
+    exportJSON();
+    setDrawerOpen(false);
+  });
+  elements.drawerImportBtn.addEventListener("click", () => {
+    elements.importFile.click();
+    setDrawerOpen(false);
+  });
+  elements.drawerExportCSVBtn.addEventListener("click", () => {
+    exportCSV();
+    setDrawerOpen(false);
+  });
+  elements.drawerDarkModeBtn.addEventListener("click", () => {
+    toggleDarkMode();
+    setDrawerOpen(false);
+  });
+  elements.drawerFrequentBtn.addEventListener("click", () => {
+    showFrequent();
+    setDrawerOpen(false);
+    scrollToElement(elements.showList);
+  });
   elements.searchInput.addEventListener("input", render);
   elements.sortSelect.addEventListener("change", render);
   elements.pageSizeSelect.addEventListener("change", changePageSize);
