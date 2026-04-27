@@ -24,14 +24,19 @@
             <span></span>
           </button>
           <div>
-          <h1>Donghua Episode Tracker</h1>
-          <p class="subtitle">
-            Track your watch progress, jump between pages quickly, and keep
-            your list synced with Firebase.
-          </p>
+            <p class="eyebrow">Personal watch dashboard</p>
+            <h1>Donghua Episode Tracker</h1>
+            <p class="subtitle">
+              Track progress, resume faster, and keep your list synced.
+            </p>
           </div>
         </div>
-
+        <nav class="quick-nav" aria-label="Quick navigation">
+          <a href="add-shows.html">Add Shows</a>
+          <a href="#frequently-used">Frequent</a>
+          <a href="#watch-calendar">Calendar</a>
+          <a href="profile.html">Profile</a>
+        </nav>
       </header>
 
       <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
@@ -111,66 +116,68 @@
         </div>
       </section>
 
-      <section class="stats-grid" aria-label="Tracker statistics">
-        <article class="stat-card">
-          <p class="stat-label">Total Shows</p>
-          <p class="stat-value" id="totalShowsStat">0</p>
-          <p class="stat-note">Saved titles</p>
-        </article>
-        <article class="stat-card">
-          <p class="stat-label">In Progress</p>
-          <p class="stat-value" id="inProgressStat">0</p>
-          <p class="stat-note">Episode count above 0</p>
-        </article>
-        <article class="stat-card">
-          <p class="stat-label">Episodes Watched</p>
-          <p class="stat-value" id="episodesWatchedStat">0</p>
-          <p class="stat-note">Across all shows</p>
-        </article>
-        <article class="stat-card">
-          <p class="stat-label">Most Used</p>
-          <p class="stat-value" id="mostUsedStat">-</p>
-          <p class="stat-note" id="mostUsedNote">No usage yet</p>
-        </article>
-      </section>
+      <section class="tracker-surface">
+        <section class="stats-grid" aria-label="Tracker statistics">
+          <article class="stat-card">
+            <p class="stat-label">Total Shows</p>
+            <p class="stat-value" id="totalShowsStat">0</p>
+            <p class="stat-note">Saved titles</p>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">In Progress</p>
+            <p class="stat-value" id="inProgressStat">0</p>
+            <p class="stat-note">Episode count above 0</p>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">Episodes Watched</p>
+            <p class="stat-value" id="episodesWatchedStat">0</p>
+            <p class="stat-note">Across all shows</p>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">Most Used</p>
+            <p class="stat-value" id="mostUsedStat">-</p>
+            <p class="stat-note" id="mostUsedNote">No usage yet</p>
+          </article>
+        </section>
 
-      <section class="panel" aria-label="Tracker controls">
-        <input
-          type="file"
-          id="importFile"
-          accept="application/json,.json"
-          hidden
-        />
+        <section class="panel" aria-label="Tracker controls">
+          <input
+            type="file"
+            id="importFile"
+            accept="application/json,.json"
+            hidden
+          />
 
-        <div class="search-sort">
-          <input type="text" id="searchInput" placeholder="Search shows..." />
-          <select id="sortSelect" aria-label="Sort shows">
-            <option value="created">Sort by Creation Time</option>
-            <option value="name">Sort by Name (A-Z)</option>
-            <option value="ep">Sort by Episode (Highest)</option>
-          </select>
-          <label>
-            Shows per page
-            <select id="pageSizeSelect">
-              <option value="5">5</option>
-              <option value="10" selected>10</option>
-              <option value="20">20</option>
+          <div class="search-sort">
+            <input type="text" id="searchInput" placeholder="Search shows..." />
+            <select id="sortSelect" aria-label="Sort shows">
+              <option value="created">Sort by Creation Time</option>
+              <option value="name">Sort by Name (A-Z)</option>
+              <option value="ep">Sort by Episode (Highest)</option>
             </select>
-          </label>
-          <label>
-            Jump to page
-            <input type="number" id="jumpPage" min="1" />
-          </label>
-        </div>
+            <label>
+              Shows per page
+              <select id="pageSizeSelect">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+              </select>
+            </label>
+            <label>
+              Jump to page
+              <input type="number" id="jumpPage" min="1" />
+            </label>
+          </div>
+        </section>
+
+        <section id="showList" class="show-list" aria-live="polite"></section>
+
+        <nav class="pagination" aria-label="Pagination">
+          <button class="pagination-btn" id="prevBtn">Previous</button>
+          <span id="pageInfo"></span>
+          <button class="pagination-btn" id="nextBtn">Next</button>
+        </nav>
       </section>
-
-      <section id="showList" aria-live="polite"></section>
-
-      <nav class="pagination" aria-label="Pagination">
-        <button class="pagination-btn" id="prevBtn">Previous</button>
-        <span id="pageInfo"></span>
-        <button class="pagination-btn" id="nextBtn">Next</button>
-      </nav>
 
       <div class="toast-stack" id="toastStack" aria-live="polite"></div>
     </main>
