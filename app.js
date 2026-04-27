@@ -103,6 +103,7 @@ const appControls = [
 let shows = {};
 let currentPage = 1;
 let showsPerPage = 10;
+let activeView = "list";
 let darkMode = localStorage.getItem("darkMode") === "true";
 let unsubscribeShows = null;
 let pendingConfirmation = null;
@@ -282,7 +283,13 @@ function bindClick(element, handler) {
 
 function handleFeatureHash({ scroll = true } = {}) {
   const action = window.location.hash.slice(1);
-  if (!action) return;
+  if (!action) {
+    if (activeView !== "list") {
+      setActiveView("list");
+      render();
+    }
+    return;
+  }
 
   const controlPanel = elements.searchInput.closest(".panel");
   const actionHandlers = {
@@ -306,6 +313,10 @@ function handleFeatureHash({ scroll = true } = {}) {
       showFrequent();
       if (scroll) scrollToElement(elements.showList);
     },
+    "watch-calendar": () => {
+      showCalendar();
+      if (scroll) scrollToElement(elements.showList);
+    },
     backup: () => {
       scrollToElement(controlPanel);
     },
@@ -323,6 +334,23 @@ function applyPersistentFeatureHash() {
   if (window.location.hash === "#frequently-used") {
     showFrequent();
   }
+
+  if (window.location.hash === "#watch-calendar") {
+    showCalendar();
+  }
+}
+
+function setActiveView(view) {
+  activeView = view;
+
+  if (view === "list" && window.location.hash === "#watch-calendar") {
+    window.history.replaceState(null, "", window.location.pathname);
+  }
+}
+
+function showMainList() {
+  setActiveView("list");
+  render();
 }
 
 function renderProfile(user) {
@@ -691,24 +719,28 @@ function downloadBlob(blob, filename) {
 }
 
 function changePageSize() {
+  setActiveView("list");
   showsPerPage = parseInt(elements.pageSizeSelect.value, 10);
   currentPage = 1;
   render();
 }
 
 function jumpToPage() {
+  setActiveView("list");
   const page = parseInt(elements.jumpPage.value, 10);
   if (!isNaN(page)) currentPage = page;
   render();
 }
 
 function nextPage() {
+  setActiveView("list");
   const totalPages = Math.ceil(filteredShows().length / showsPerPage);
   if (currentPage < totalPages) currentPage++;
   render();
 }
 
 function prevPage() {
+  setActiveView("list");
   if (currentPage > 1) currentPage--;
   render();
 }
@@ -851,6 +883,7 @@ function createShowButtons(show) {
 }
 
 function showFrequent() {
+  setActiveView("frequent");
   const topShows = Object.entries(shows)
     .sort((a, b) => b[1].usage - a[1].usage)
     .slice(0, 10);
@@ -872,17 +905,27 @@ function getHistoryDate(entry) {
 }
 
 function showCalendar() {
+  setActiveView("calendar");
   const activities = Object.entries(shows)
     .flatMap(([show, data]) =>
-      data.history.map((entry) => ({
-        show,
-        entry,
-        timestamp: getHistoryDate(entry),
-      }))
+      data.history.length > 0
+        ? data.history.map((entry) => ({
+            show,
+            entry,
+            timestamp: getHistoryDate(entry),
+          }))
+        : [
+            {
+              show,
+              entry: "Added to tracker",
+              timestamp: data.created || 0,
+            },
+          ]
     )
     .sort((a, b) => b.timestamp - a.timestamp);
 
   elements.showList.innerHTML = "";
+  elements.showList.appendChild(createCalendarHeader());
   if (activities.length === 0) {
     showEmptyState("No watch calendar yet", "Update episodes to build your calendar.");
     elements.pageInfo.textContent = "Watch Calendar";
@@ -915,8 +958,42 @@ function showCalendar() {
   elements.pageInfo.textContent = "Watch Calendar";
 }
 
+function createCalendarHeader() {
+  const header = document.createElement("div");
+  header.className = "view-header";
+
+  const titleWrap = document.createElement("div");
+  const title = document.createElement("h2");
+  title.textContent = "Watch Calendar";
+  const detail = document.createElement("p");
+  detail.textContent = "Recent tracker activity";
+  titleWrap.append(title, detail);
+  header.appendChild(titleWrap);
+
+  const backButton = document.createElement("button");
+  backButton.type = "button";
+  backButton.className = "pagination-btn view-back-btn";
+  backButton.textContent = "Back";
+  backButton.setAttribute("aria-label", "Back to main tracker");
+  backButton.addEventListener("click", showMainList);
+  header.appendChild(backButton);
+
+  return header;
+}
+
 function render() {
   updateStats();
+
+  if (activeView === "calendar") {
+    showCalendar();
+    return;
+  }
+
+  if (activeView === "frequent") {
+    showFrequent();
+    return;
+  }
+
   elements.showList.innerHTML = "";
 
   const sortedShows = filteredShows();
@@ -1021,12 +1098,22 @@ function bindEvents() {
     scrollToElement(elements.showList);
   });
   bindClick(elements.drawerCalendarBtn, () => {
-    showCalendar();
+    if (window.location.hash === "#watch-calendar") {
+      showCalendar();
+    } else {
+      window.location.hash = "watch-calendar";
+    }
     setDrawerOpen(false);
     scrollToElement(elements.showList);
   });
-  elements.searchInput.addEventListener("input", render);
-  elements.sortSelect.addEventListener("change", render);
+  elements.searchInput.addEventListener("input", () => {
+    setActiveView("list");
+    render();
+  });
+  elements.sortSelect.addEventListener("change", () => {
+    setActiveView("list");
+    render();
+  });
   elements.pageSizeSelect.addEventListener("change", changePageSize);
   elements.jumpPage.addEventListener("input", jumpToPage);
   elements.prevBtn.addEventListener("click", prevPage);

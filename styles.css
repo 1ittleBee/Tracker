@@ -947,6 +947,33 @@ select {
   padding: 18px;
 }
 
+.view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0 12px;
+}
+
+.view-header h2,
+.view-header p {
+  margin: 0;
+}
+
+.view-header h2 {
+  font-size: 1.25rem;
+}
+
+.view-header p {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.view-back-btn {
+  width: auto;
+  min-width: 96px;
+}
+
 .calendar-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1028,6 +1055,15 @@ select {
   .dashboard-layout,
   .calendar-list {
     grid-template-columns: 1fr;
+  }
+
+  .view-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .view-back-btn {
+    width: 100%;
   }
 
   .profile-page-card {
