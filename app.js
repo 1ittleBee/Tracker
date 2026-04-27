@@ -110,6 +110,7 @@ let pendingConfirmation = null;
 let pendingSync = JSON.parse(localStorage.getItem("pendingSync") || "[]");
 const CACHE_KEY = "donghuaShowsCache";
 const SYNC_KEY = "pendingSync";
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 document.body.classList.toggle("dark-mode", darkMode);
 
@@ -404,6 +405,9 @@ function isValidShowName(name) {
 
 function normalizeShow(data = {}) {
   data = data || {};
+  const lastWatchedAt = getTimestamp(data.lastWatchedAt);
+  const fallbackWatchedAt = getLastHistoryTimestamp(data.history);
+
   return {
     ep: Number.isFinite(Number(data.ep)) ? Math.max(0, Number(data.ep)) : 0,
     history: Array.isArray(data.history) ? data.history.map(String) : [],
@@ -416,7 +420,29 @@ function normalizeShow(data = {}) {
     created: Number.isFinite(Number(data.created))
       ? Number(data.created)
       : Date.now(),
+    lastWatchedAt: lastWatchedAt > 0 ? lastWatchedAt : fallbackWatchedAt,
   };
+}
+
+function getTimestamp(value) {
+  const numericTimestamp = Number(value);
+  if (Number.isFinite(numericTimestamp) && numericTimestamp > 0) {
+    return numericTimestamp;
+  }
+
+  const parsedTimestamp = Date.parse(value || "");
+  return Number.isFinite(parsedTimestamp) ? parsedTimestamp : 0;
+}
+
+function getLastHistoryTimestamp(history = []) {
+  if (!Array.isArray(history) || history.length === 0) return 0;
+
+  for (let index = history.length - 1; index >= 0; index--) {
+    const timestamp = getHistoryDate(String(history[index]));
+    if (timestamp > 0) return timestamp;
+  }
+
+  return 0;
 }
 
 function initRealtime() {
@@ -479,13 +505,13 @@ async function changeEpisode(show, direction) {
   const oldEp = current.ep;
   const newEp = oldEp + direction;
   if (newEp < 0) return;
+  const watchedAt = Date.now();
+  const historyEntry = `${oldEp} -> ${newEp} on ${new Date(watchedAt).toLocaleDateString()}`;
   const nextShow = {
     ...current,
     ep: newEp,
-    history: [
-      ...current.history,
-      `${oldEp} -> ${newEp} on ${new Date().toLocaleDateString()}`,
-    ],
+    history: [...current.history, historyEntry],
+    lastWatchedAt: watchedAt,
     usage: current.usage + 1,
   };
 
@@ -504,13 +530,12 @@ async function changeEpisode(show, direction) {
       const oldEp = data.ep || 0;
       const newEp = oldEp + direction;
       if (newEp < 0) return;
+      const historyEntry = `${oldEp} -> ${newEp} on ${new Date(watchedAt).toLocaleDateString()}`;
 
       transaction.update(showRef, {
         ep: newEp,
-        history: [
-          ...(data.history || []),
-          `${oldEp} -> ${newEp} on ${new Date().toLocaleDateString()}`,
-        ],
+        history: [...(data.history || []), historyEntry],
+        lastWatchedAt: watchedAt,
         usage: (data.usage || 0) + 1,
       });
     });
@@ -525,13 +550,13 @@ async function updateEpisode(show) {
   const ep = parseInt(epInput, 10);
   if (isNaN(ep) || ep < 0) return;
   const current = normalizeShow(shows[show]);
+  const watchedAt = Date.now();
+  const historyEntry = `${current.ep} -> ${ep} on ${new Date(watchedAt).toLocaleDateString()}`;
   const nextShow = {
     ...current,
     ep,
-    history: [
-      ...current.history,
-      `${current.ep} -> ${ep} on ${new Date().toLocaleDateString()}`,
-    ],
+    history: [...current.history, historyEntry],
+    lastWatchedAt: watchedAt,
     usage: current.usage + 1,
   };
 
@@ -547,12 +572,11 @@ async function updateEpisode(show) {
       if (!docSnap.exists()) return;
 
       const data = docSnap.data();
+      const historyEntry = `${data.ep || 0} -> ${ep} on ${new Date(watchedAt).toLocaleDateString()}`;
       transaction.update(showRef, {
         ep,
-        history: [
-          ...(data.history || []),
-          `${data.ep} -> ${ep} on ${new Date().toLocaleDateString()}`,
-        ],
+        history: [...(data.history || []), historyEntry],
+        lastWatchedAt: watchedAt,
         usage: (data.usage || 0) + 1,
       });
     });
@@ -810,6 +834,8 @@ function createShowRow(show, data, includeUsage = false) {
   infoDiv.appendChild(createShowTitle(show));
   infoDiv.appendChild(createShowMeta(data, includeUsage));
   infoDiv.appendChild(createHistory(data));
+  const resumeHint = createSmartResume(show, data);
+  if (resumeHint) infoDiv.appendChild(resumeHint);
   div.appendChild(infoDiv);
 
   const buttonsDiv = document.createElement("div");
@@ -859,6 +885,27 @@ function createHistory(data) {
     data.history.length > 0 ? data.history[data.history.length - 1] : "No history";
   historyDiv.textContent = `Latest: ${lastLog}`;
   return historyDiv;
+}
+
+function createSmartResume(show, data) {
+  const resumeText = getSmartResumeText(show, data);
+  if (!resumeText) return null;
+
+  const resumeDiv = document.createElement("div");
+  resumeDiv.className = "smart-resume";
+  resumeDiv.textContent = resumeText;
+  return resumeDiv;
+}
+
+function getSmartResumeText(show, data) {
+  const normalized = normalizeShow(data);
+  if (normalized.ep <= 0 || normalized.lastWatchedAt <= 0) return "";
+
+  const daysAgo = Math.floor((Date.now() - normalized.lastWatchedAt) / DAY_IN_MS);
+  if (daysAgo < 1) return "";
+
+  const dayLabel = daysAgo === 1 ? "1 day" : `${daysAgo} days`;
+  return `You stopped at EP ${normalized.ep} of ${show} ${dayLabel} ago`;
 }
 
 function createShowButtons(show) {
