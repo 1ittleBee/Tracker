@@ -913,9 +913,9 @@ function createShowButtons(show) {
     [shows[show]?.favorite ? "★" : "☆", "favorite-btn", `Pin ${show}`, () => toggleFavorite(show)],
     ["+", "inc-btn", `Increase episode for ${show}`, () => changeEpisode(show, 1)],
     ["-", "dec-btn", `Decrease episode for ${show}`, () => changeEpisode(show, -1)],
-    ["Edit ep", "update-btn", `Edit episode for ${show}`, () => updateEpisode(show)],
-    ["Rename", "edit-btn", `Rename ${show}`, () => editShowName(show)],
-    ["Delete", "delete-btn", `Delete ${show}`, () => deleteShow(show)],
+    ["EP", "update-btn", `Edit episode for ${show}`, () => updateEpisode(show)],
+    ["Name", "edit-btn", `Rename ${show}`, () => editShowName(show)],
+    ["Del", "delete-btn", `Delete ${show}`, () => deleteShow(show)],
   ];
 
   return buttonConfigs.map(([label, className, ariaLabel, onClick]) => {
