@@ -1616,25 +1616,28 @@ label {
   display: inline-flex;
   align-items: center;
   min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
   border-radius: 999px;
   padding: 5px 10px;
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 900;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.24);
+  text-shadow: 0 1px 8px rgba(15, 23, 42, 0.7);
 }
 
 .episode-badge {
-  background: rgba(125, 211, 252, 0.22);
-  color: #e0f2fe;
+  background: rgba(70, 117, 139, 0.82);
+  color: #f0f9ff;
 }
 
 .usage-badge {
-  background: rgba(45, 212, 191, 0.22);
-  color: #ccfbf1;
+  background: rgba(20, 116, 103, 0.8);
+  color: #ecfeff;
 }
 
 .favorite-badge {
-  background: rgba(251, 191, 36, 0.24);
-  color: #fef3c7;
+  background: rgba(133, 96, 31, 0.82);
+  color: #fff7d6;
 }
 
 .show-info .history,
@@ -1669,7 +1672,7 @@ label {
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(15, 23, 42, 0.14);
+  background: rgba(15, 23, 42, 0.26);
   backdrop-filter: none;
 }
 
@@ -1701,6 +1704,10 @@ button {
   min-height: 38px;
   padding: 8px 10px;
   font-size: 0.86rem;
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+  font-weight: 900;
+  text-shadow: 0 1px 8px rgba(15, 23, 42, 0.72);
 }
 
 .drawer-toggle {
@@ -1761,33 +1768,33 @@ select option {
 }
 
 .update-btn {
-  background: rgba(96, 165, 250, 0.22);
-  color: #dbeafe;
+  background: rgba(64, 101, 142, 0.84);
+  color: #eff6ff;
 }
 
 .edit-btn {
-  background: rgba(245, 158, 11, 0.24);
-  color: #fef3c7;
+  background: rgba(132, 93, 32, 0.86);
+  color: #fff7d6;
 }
 
 .inc-btn {
-  background: rgba(34, 197, 94, 0.24);
-  color: #dcfce7;
+  background: rgba(39, 118, 80, 0.86);
+  color: #f0fdf4;
 }
 
 .dec-btn {
-  background: rgba(124, 58, 237, 0.24);
-  color: #ede9fe;
+  background: rgba(83, 62, 139, 0.86);
+  color: #f5f3ff;
 }
 
 .favorite-btn {
-  background: rgba(251, 191, 36, 0.18);
-  color: #fde68a;
+  background: rgba(137, 105, 42, 0.86);
+  color: #fef3c7;
 }
 
 .delete-btn {
-  background: rgba(248, 113, 113, 0.24);
-  color: #fee2e2;
+  background: rgba(143, 76, 82, 0.88);
+  color: #fff1f2;
 }
 
 .export-btn {
